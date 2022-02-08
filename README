@@ -2,11 +2,11 @@ Goal Statement
 Opportunity Enterprises is a non-profit organization that builds tracheotomy kits as a skill-building opportunity to people with developmental disabilities. 
 Our device will enable persons with disabilities to safely and easily cut rubber bands for use in tracheotomy kits.
 
-This repository includes the program that ill run on the MSP430FR4133 microcontroller used in our system.
+This repository includes the program that will run on the MSP430FR4133 microcontroller used in our system.
 The code will interface with several components of the machine including:
 Tube Detection Sensor
 Cut Detection Sensor
 LCD2004 IC2 screen
 4 control buttons
 Emergency Stop button
-Relay Module
+Relay Module - controlling the motor
