@@ -1,0 +1,224 @@
+//////////////////////////////////////////
+// BAND FABRICATION MACHINE             //
+// Program Version 1.1 ARDUINO          //
+// Senior Design Team 10                //
+//                                      //
+// This Program interfaces all of the   //
+// control elements of our machine:     //
+// led screen, buttons, TubeDetSensor,  //
+// CutSensor, relay, and switches.      //
+//                                      //
+// System Has 3 MODES:                  //
+// Mode = 0; Manual Mode                //
+// Mode = 1; Automatic Mode             //
+// Mode = 2; Maintenance Mode           //
+//                                      //
+//////////////////////////////////////////
+
+/////////////////
+// Libraries
+/////////////////
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+
+/////////////////
+// Initial Setup
+/////////////////
+void setup()
+{
+    //INITIALIZE VARIABLES
+    int sysmode = 0;            //0 = Manual, 1 = Automatic 2 = Maintenence
+    int count = 0;
+    int B1,B2 = 0;
+    int PassFlg = 0;
+    int PassData = 0;
+    int PassInit = 0;
+    int PassT = 0;
+    int PassChk[6] = {4,2,2,3,1,2};
+    int PassEnter[6] = {0,0,0,0,0,0};
+    int TSval = 0;
+    int CSval = 0;
+    int ADCct = 0;
+    int ADCtrig = 0; //0 is tube sensor and 1 is cut sensor
+
+    //SETUP LCD SCREEN
+
+    //BUTTON SETUP
+
+    
+  
+  LiquidCrystal_I2C lcd(0x27,20,4);  // set the LCD address to 0x27 for a 20 chars and 4 line display
+}
+
+
+//////////////////
+// PROGRAM CODE
+//////////////////
+void loop()
+{
+     if(ADCtrig == 1) // test the Cut Sensor
+        {
+            if(ADC12MEM0 > 0x800) // Is TubeSensor ON?
+            {
+                CSval = 1;
+            }
+            else
+            {
+                CSval = 0;
+            }
+
+        }
+        if(ADCtrig == 1) // test the TubeSensor
+        {
+            if(ADC12MEM1 > 0x900) // Is Cut Sensor ON?
+            {
+                TSval = 1;
+            }
+            else
+            {
+                TSval = 1; // should be 0 but 1 for demo
+            }
+        }
+
+        if(ADCct < 200)
+        {
+            ADCct++;
+        }
+        else
+        {
+            if(ADCtrig == 0)
+            {
+                ADCtrig = 1;
+                ADC12MCTL0 = ADC12_P96; // P9.6 is analog input
+            }
+            else
+            {
+                ADCtrig = 0;
+                ADC12MCTL0 = ADC12_P92; // P9.2 is analog input
+            }
+            ADCct = 0;
+            ADC12CTL0 = ADC12CTL0 | ADC12ENC; // Enable conversion
+            ADC12CTL0 = ADC12CTL0 | ADC12SC; // Start conversion
+        }
+
+        if((BIT0 & P9IN) == 1) // Is CB0 button pushed?
+        {
+            PassFlg = 1;
+            PassData = 1;
+            unsigned long delay; // Wait for bouncing to end
+             for(delay=0;delay<120000;delay=delay+1);
+        }
+        if((BIT0 & P2IN) == 1) // Is CB1 button pushed? (CB1 & P2IN) == 1 in if
+        {
+            PassFlg = 1;
+            PassData = 2;
+            unsigned long delay; // Wait for bouncing to end
+            for(delay=0;delay<120000;delay=delay+1);
+        }
+        if((BUTTON11 & P1IN) == 0) // Is P11 button pushed?
+        {
+            PassFlg = 1;
+            PassData = 3;
+            unsigned long delay; // Wait for bouncing to end
+            for(delay=0;delay<120000;delay=delay+1);
+        }
+        if((BUTTON12 & P1IN) == 0) // Is P12 button pushed?
+        {
+            PassFlg = 1;
+            PassData = 4;
+            unsigned long delay; // Wait for bouncing to end
+            for(delay=0;delay<120000;delay=delay+1);
+        }
+
+        if(sysmode == 0) //When Machine is in Manual Mode (ON boot)
+        {
+            P1OUT = P1OUT & RED_LED_OFF; // Turn off the red LED
+            if(PassFlg == 1) //when a password event has been triggered
+            {
+                if(PassInit == 0) //on initial startup
+                {
+                    PassT = 0;
+                    PassData = 0;
+                    PassInit = 1;
+                    myLCD_showChar(' ', 4); // Display "H" in space PassT
+                    myLCD_showChar(' ', 5); // Display "H" in space PassT
+                    myLCD_showChar(' ', 6); // Display "H" in space PassT
+                }
+                if(TA0CTL & TAIFG) // If timer has finished counting
+                {
+                    if(PassData != 0)
+                    {
+                        PassEnter[PassT] = PassData;
+                        char DispVal=PassData+'0';
+                        PassData = 0;
+                        myLCD_showChar(DispVal, PassT+1 ); // Display Dispval in space PassT+1
+                        PassT++;
+                    }
+                }
+                if(PassT == 6)
+                {
+                    PassFlg = 0;
+                    PassT = 0;
+                    int diff = 0;
+                    if (PassEnter[0] != PassChk[0]) diff +=1;
+                    if (PassEnter[1] != PassChk[1]) diff +=1;
+                    if (PassEnter[2] != PassChk[2]) diff +=1;
+                    if (PassEnter[3] != PassChk[3]) diff +=1;
+                    if (PassEnter[4] != PassChk[4]) diff +=1;
+                    if (PassEnter[5] != PassChk[5]) diff +=1;
+                    if(diff == 0) sysmode = 1;
+                    else myLCD_displayNumber(count);
+                    PassInit = 0;
+                }
+            }
+            if(TSval == 1) // Is TubeSensor ON?
+            {
+                if(CSval == 1) // Is cutting sensor on?
+                {
+                    B1 = 1;
+                }
+                if(B1 == 1)
+                {
+                    if(CSval == 0)
+                    {
+
+                            count++;
+                            myLCD_displayNumber(count);
+                            TA0CTL = TA0CTL & (~TAIFG); //resets timer
+                            B1 = 0;
+
+                    }
+                }
+
+            }
+
+
+        }
+
+        if(sysmode == 1) //When Machine is in Automatic Mode
+        {
+            P1OUT = P1OUT | RED_LED; // Turn on the RED LED
+            if(PassFlg==1)
+            {
+                PassFlg = 0;
+                sysmode = 0;
+                myLCD_displayNumber(count);
+            }
+
+        }
+
+        if(sysmode == 2) //When Machine is in Maintenence Mode
+        {
+
+        }
+
+
+
+
+
+
+    }
+
+} 
+}
