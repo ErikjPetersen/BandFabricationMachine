@@ -1,0 +1,68 @@
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
+
+
+  float threshold = 0.50;
+  int count = 0;           // Determines how many rubber bands were made
+  //const int interval = 5;
+
+  
+void setup() {
+
+  Serial.begin(9600);
+  lcd.init();
+  lcd.clear();         
+  lcd.backlight();      // Make sure backlight is on
+  
+  
+  // Print a message on both lines of the LCD.
+  lcd.setCursor(4,0);   //Set cursor to character 2 on line 0
+  lcd.print("Hello User");
+  
+  lcd.setCursor(4,1);   //Move cursor to character 2 on line 1
+  lcd.print("Welcome to ");
+  lcd.setCursor(4,2);
+  lcd.print("Automatic Mode");
+
+
+  delay(3000);
+  lcd.noBacklight();
+  delay(1000);
+  lcd.clear();
+  lcd.backlight();
+  
+  lcd.setCursor(4,2);
+  lcd.print("Count: ");
+}
+
+float v1;
+boolean waitFor2ndTrigger;
+
+void loop() {
+
+  waitFor2ndTrigger = true;
+  v1 = volts(A1);
+  Serial.println("Waiting for trigger...");
+  while (v1 > threshold) {
+    delay(150);
+    v1 = volts(A1);
+  }
+  Serial.print("Started...");
+
+  while (waitFor2ndTrigger) {
+    //delay(1500);
+    v1 = volts(A1);
+    waitFor2ndTrigger = (v1 < threshold);
+  }
+  
+  count = count+1;
+  Serial.println("Stopped");
+  lcd.setCursor(10, 2);
+  lcd.print(count);
+}
+
+float volts(int adPin)
+{
+  return float(analogRead(adPin))*5/1024;
+}
