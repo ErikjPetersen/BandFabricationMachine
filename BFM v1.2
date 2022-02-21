@@ -1,0 +1,148 @@
+//////////////////////////////////////////
+// BAND FABRICATION MACHINE             //
+// Program Version 1.2 ARDUINO          //
+// Senior Design Team 10                //
+//                                      //
+// This Program interfaces all of the   //
+// control elements of our machine:     //
+// led screen, buttons, TubeDetSensor,  //
+// CutSensor, relay, and switches.      //
+//                                      //
+// System Has 3 MODES:                  //
+// Mode = 0; Manual Mode                //
+// Mode = 1; Automatic Mode             //
+// Mode = 2; Maintenance Mode           //
+//                                      //
+//////////////////////////////////////////
+
+/////////////////
+// Libraries
+/////////////////
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+/////////////////
+// Initial Setup
+/////////////////
+void setup() 
+{  
+//INITIALIZE VARIABLES
+  int sysmode = 0;            //0 = Manual, 1 = Automatic 2 = Maintenence
+  int count = 0;
+  int PassFlg = 0;
+  int PassData = 0;
+  int PassInit = 0;
+  int PassT = 0;
+  int PassChk[6] = {4,2,2,3,1,2};
+  int PassEnter[6] = {0,0,0,0,0,0};
+  int TSval = 0;
+  int CSval = 0;
+  int ADCct = 0;
+  int ADCtrig = 0; //0 is tube sensor and 1 is cut sensor 
+  float v1;
+  boolean waitFor2ndTrigger;
+
+//LCD SETUP
+  LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
+  Serial.begin(9600);
+  lcd.init();
+  lcd.clear();         
+  lcd.backlight();      // Make sure backlight is on  
+  
+//BUTTON SETUP 
+  const int B1Pin = 3;     // the number of the pushbutton pin
+  const int B2Pin = 4;     // the number of the pushbutton pin
+  const int B3Pin = 5;     // the number of the pushbutton pin
+  const int B4Pin = 6;     // the number of the pushbutton pin
+  int B1val,B2val,B3val,B4val = 0;// variable for reading the pushbutton status
+  pinMode(B1Pin, INPUT); //initialize buttons pins as input
+  pinMode(B2Pin, INPUT);
+  pinMode(B3Pin, INPUT);
+  pinMode(B4Pin, INPUT);
+  
+//Sensor Setup  
+
+//START UP SPLASH SCREEN
+  lcd.setCursor(4,1);   //Set cursor to character 4 on line 2
+  lcd.print("RBFM  v1.2");
+  lcd.setCursor(3,2);   //Move cursor to character 4 on line 2
+  lcd.print("Team 10 - OE");  
+  delay(3000);
+  lcd.noBacklight();
+  delay(1000);
+  lcd.clear();
+  lcd.backlight();
+  
+//Initialize main menu  
+  lcd.setCursor(4,2);
+  lcd.print("Count: ");
+}
+
+//////////////////
+// PROGRAM CODE
+//////////////////
+void loop() 
+{  
+  //TEST TUBE DETECTION SENSOR (sets variable TSval to 0-empty 1-tube detected)
+  
+  //TEST CUT DETECTION SENSOR (sets variable CSval to 0-empty 1-tube detected)
+  
+  //TEST FOR 4 individual buttons (sets variables B0-B3 0-no press 1-pressed)
+  B1val = digitalRead(B1Pin); //read state of pushbuttons
+  B2val = digitalRead(B2Pin);
+  B3val = digitalRead(B3Pin);
+  B4val = digitalRead(B4Pin);
+  if(B1val == 1) 
+  {
+  PassFlg = 1;
+  PassData = 1;
+  delay(100)
+  }
+  if(B2val == 1) 
+  {
+  PassFlg = 1;
+  PassData = 2;
+  delay(100)
+  }  
+  if(B3val == 1) 
+  {
+  PassFlg = 1;
+  PassData = 3;
+  delay(100)
+  }  
+  if(B4val == 1) 
+  {
+  PassFlg = 1;
+  PassData = 4;
+  delay(100)
+  }
+ 
+  //WHEN MACHINE IS IN MANUAL MODE (ON BOOT)
+  if(sysmode == 0)
+  {
+    //VERY IMPORTANT SET RELAY OFF HERE
+    if(PassFlg == 1) //if a password event has been triggered
+    {
+      if(PassInit == 0) //On initial startup
+      {
+        PassT = 0;
+        PassData = 0;
+        PassInit = 1;
+        //HERE IS WHERE YOU BRING UP PASSWORD SCREEN
+      }
+      
+    }
+  
+  }
+  
+  //WHEN MACHINE IS IN AUTOMATIC MODE (AFTER PASSWORD)
+  if(sysmode == 1)
+  {
+  
+  }
+}
+
+float volts(int adPin)
+{
+  return float(analogRead(adPin))*5/1024;
+}
