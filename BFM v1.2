@@ -24,8 +24,6 @@
 /////////////////
 // Initial Setup
 /////////////////
-void setup() 
-{  
 //INITIALIZE VARIABLES
   int sysmode = 0;            //0 = Manual, 1 = Automatic 2 = Maintenence
   int count = 0;
@@ -41,6 +39,14 @@ void setup()
   int ADCtrig = 0; //0 is tube sensor and 1 is cut sensor 
   float v1;
   boolean waitFor2ndTrigger;
+  int B1val,B2val,B3val,B4val = 0;// variable for reading the pushbutton status
+  const int B1Pin = 3;     // the number of the pushbutton pin
+  const int B2Pin = 4;     // the number of the pushbutton pin
+  const int B3Pin = 5;     // the number of the pushbutton pin
+  const int B4Pin = 6;     // the number of the pushbutton pin
+
+void setup() 
+{  
 
 //LCD SETUP
   LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display
@@ -50,11 +56,6 @@ void setup()
   lcd.backlight();      // Make sure backlight is on  
   
 //BUTTON SETUP 
-  const int B1Pin = 3;     // the number of the pushbutton pin
-  const int B2Pin = 4;     // the number of the pushbutton pin
-  const int B3Pin = 5;     // the number of the pushbutton pin
-  const int B4Pin = 6;     // the number of the pushbutton pin
-  int B1val,B2val,B3val,B4val = 0;// variable for reading the pushbutton status
   pinMode(B1Pin, INPUT); //initialize buttons pins as input
   pinMode(B2Pin, INPUT);
   pinMode(B3Pin, INPUT);
@@ -85,36 +86,41 @@ void loop()
 {  
   //TEST TUBE DETECTION SENSOR (sets variable TSval to 0-empty 1-tube detected)
   
+  
   //TEST CUT DETECTION SENSOR (sets variable CSval to 0-empty 1-tube detected)
+
+
+
+
   
   //TEST FOR 4 individual buttons (sets variables B0-B3 0-no press 1-pressed)
   B1val = digitalRead(B1Pin); //read state of pushbuttons
   B2val = digitalRead(B2Pin);
   B3val = digitalRead(B3Pin);
   B4val = digitalRead(B4Pin);
-  if(B1val == 1) 
+  if(B1val == 0) 
   {
   PassFlg = 1;
   PassData = 1;
-  delay(100)
+  delay(100);
   }
-  if(B2val == 1) 
+  if(B2val == 0) 
   {
   PassFlg = 1;
   PassData = 2;
-  delay(100)
+  delay(100);
   }  
-  if(B3val == 1) 
+  if(B3val == 0) 
   {
   PassFlg = 1;
   PassData = 3;
-  delay(100)
+  delay(100);
   }  
-  if(B4val == 1) 
+  if(B4val == 0) 
   {
   PassFlg = 1;
   PassData = 4;
-  delay(100)
+  delay(100);
   }
  
   //WHEN MACHINE IS IN MANUAL MODE (ON BOOT)
@@ -129,7 +135,7 @@ void loop()
         PassData = 0;
         PassInit = 1;
         //HERE IS WHERE YOU BRING UP PASSWORD SCREEN
-        wait(100);
+        delay(100);
       }
       if(PassData != 0)
       {
