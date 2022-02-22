@@ -129,9 +129,38 @@ void loop()
         PassData = 0;
         PassInit = 1;
         //HERE IS WHERE YOU BRING UP PASSWORD SCREEN
+        wait(100);
+      }
+      if(PassData != 0)
+      {
+        PassEnter[PassT] = PassData;
+        char DispVal = PassData+'0'; //turns passdata into a char
+        PassData = 0;
+        //Display DispVal into inputted password space PassT+1
+        PassT++;
+      }
+      if(PassT == 6)
+      {
+        PassFlg = 0;
+        PassT = 0;
+        int diff = 0;
+        if (PassEnter[0] != PassChk[0]) diff+=1;
+        if (PassEnter[1] != PassChk[1]) diff+=1;
+        if (PassEnter[2] != PassChk[2]) diff+=1;
+        if (PassEnter[3] != PassChk[3]) diff+=1;
+        if (PassEnter[4] != PassChk[4]) diff+=1;
+        if (PassEnter[5] != PassChk[5]) diff+=1;
+        if(diff == 0) 
+        {
+          sysmode = 1; //turn to automatic mode if no differences
+          //say that automatic mode has been unlocked on screen
+        }
+        //clear password inputed from screen
+        PassInit = 0;
       }
       
     }
+    
   
   }
   
