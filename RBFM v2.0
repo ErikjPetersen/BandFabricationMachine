@@ -1,0 +1,479 @@
+//////////////////////////////////////////
+// BAND FABRICATION MACHINE             //
+// Program Version 1.3 ARDUINO          //
+// Senior Design Team 10                //
+//                                      //
+// This Program interfaces all of the   //
+// control elements of our machine:     //
+// led screen, buttons, TubeDetSensor,  //
+// CutSensor, relay, and switches.      //
+//                                      //
+// System Has 3 MODES:                  //
+// Mode = 0; Manual Mode                //
+// Mode = 1; Automatic Mode             //
+// Mode = 2; Maintenance Mode           //
+//                                      //
+//////////////////////////////////////////
+
+/////////////////
+// Libraries
+/////////////////
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+/////////////////
+// Initial Setup
+/////////////////
+//INITIALIZE VARIABLES
+  int sysmode = 0;            //0 = Manual, 1 = Automatic 2 = Maintenence
+  int count = 0;
+  int countFlg = 0;
+  int PassFlg = 0;
+  int PassData = 0;
+  int PassInit = 0;
+  int PassT = 0;
+  int PassChk[6] = {4,2,2,3,1,2};
+  int PassEnter[6] = {0,0,0,0,0,0};
+  int TSval = 0;
+  int CSval = 0;
+  int ADCct = 0;
+  int ADCtrig = 0; //0 is tube sensor and 1 is cut sensor 
+  int btntrig = 0;
+  int bshow = 1;
+  float v1,v2;
+  boolean waitFor2ndTrigger;
+  int B1val,B2val,B3val,B4val = 0;// variable for reading the pushbutton status
+  const int B1Pin = 3;     // the number of the pushbutton pin
+  const int B2Pin = 4;     // the number of the pushbutton pin
+  const int B3Pin = 5;     // the number of the pushbutton pin
+  const int B4Pin = 6;     // the number of the pushbutton pin
+  int scrollct = 0;
+  int scrollbnum = 1;
+  int movetoAM = 0;
+  unsigned long PrevTime = 0;
+  unsigned long CurrTime = 0;
+  int MOTORout = 0;
+  int MOTORtoggle = 0;
+  int confSC = 0;
+  int confT = 0;
+  int confINIT = 0;
+  int nop = 0;
+  LiquidCrystal_I2C lcd(0x27,16,3);  // set the LCD address to 0x3F for a 16 chars and 2 line display
+
+void setup() 
+{  
+//RELAY SETUP
+  pinMode(13, OUTPUT);
+
+//LCD SETUP
+  Serial.begin(9600);
+  lcd.init();
+  lcd.clear();         
+  lcd.backlight();      // Make sure backlight is on  
+  
+//BUTTON SETUP 
+  pinMode(B1Pin, INPUT); //initialize buttons pins as input
+  pinMode(B2Pin, INPUT);
+  pinMode(B3Pin, INPUT);
+  pinMode(B4Pin, INPUT); 
+
+//START UP SPLASH SCREEN
+  lcd.setCursor(4,1);   //Set cursor to character 4 on line 2
+  lcd.print("RBFM  v2.0");
+  lcd.setCursor(3,2);   //Move cursor to character 4 on line 2
+  lcd.print("Team 10 - OE");  
+  delay(2000);
+  lcd.noBacklight();
+  delay(500);
+  lcd.clear();
+  lcd.backlight();
+  
+//Initialize main menu 
+  lcd.setCursor(3,0);
+  lcd.print("MANUAL  MODE"); 
+  lcd.setCursor(3,1);
+  lcd.print("Count: ");
+  lcd.setCursor(2,2);
+  lcd.print("Press any btn to");
+  lcd.setCursor(2,3);
+  lcd.print("unlock auto mode");
+  
+}
+
+//////////////////
+// PROGRAM CODE
+//////////////////
+void loop() 
+{  
+  //TEST TUBE DETECTION SENSOR (sets variable TSval to 0-empty 1-tube detected)
+  v1 = volts(A1);
+  if(v1 > 0.5)
+  {
+    TSval = 1;
+  }
+  else
+  {
+    TSval = 0;
+  }
+  
+  //TEST CUT DETECTION SENSOR (sets variable CSval to 0-empty 1-tube detected)
+  v2 = volts(A2);
+  if(v2 > 0.5)
+  {
+    CSval = 1;
+  }
+  else
+  {
+    CSval = 0;
+  }
+
+  //COUNTING FUNCTION
+  if(TSval == 1)
+  {
+    if(CSval == 1)
+    {
+      countFlg = 1;
+    }  
+    else
+    {
+      if(countFlg == 1)
+      {
+      count++;
+      showCount();
+      countFlg = 0;  
+      }
+    }
+  }
+  
+
+
+  //TEST FOR 4 individual buttons (sets variables B0-B3 0-no press 1-pressed)
+  B1val = digitalRead(B1Pin); //read state of pushbuttons
+  B2val = digitalRead(B2Pin);
+  B3val = digitalRead(B3Pin);
+  B4val = digitalRead(B4Pin);
+  if(B1val == 1)
+  {
+    PassData = 1;
+    delay(200);
+  }
+  else
+  {
+    if(PassData == 1)
+    {
+      PassFlg = 1;  
+    }  
+  }
+  if(B2val == 1)
+  {
+    PassData = 2;
+    delay(200);
+  }
+  else
+  {
+    if(PassData == 2)
+    {
+      PassFlg = 1;  
+    }  
+  }         
+  if(B3val == 1)
+  {
+    PassData = 3;
+    delay(200);
+  }
+  else
+  {
+    if(PassData == 3)
+    {
+      PassFlg = 1;  
+    }  
+  }  
+  if(B4val == 1)
+  {
+    PassData = 4;
+    delay(200);
+  }
+  else
+  {
+    if(PassData == 4)
+    {
+      PassFlg = 1;  
+    }  
+  } 
+
+  //WHEN MACHINE IS IN MANUAL MODE (ON BOOT)
+  if(sysmode == 0)
+  {
+    MOTORout = 0;
+    if(PassFlg == 1) //if a password event has been triggered
+    {
+      if(PassInit == 0) //On initial startup
+      {
+        PassT = 0;
+        PassData = 0;
+        PassInit = 1;
+        //HERE IS WHERE YOU BRING UP PASSWORD SCREEN
+        lcd.clear();
+        lcd.setCursor(3,1);   //Move cursor to character 5 on line 0
+        lcd.print("ENTER PASSWORD");
+        lcd.setCursor(7,2);   //Move cursor to character 4 on line 2
+        lcd.print("******");
+        delay(100);
+      }
+      if(PassData != 0)
+      {
+        PassEnter[PassT] = PassData;
+        char DispVal = PassData+'0'; //turns passdata into a char
+        PassData = 0;
+        PassFlg = 0;
+        lcd.setCursor(PassT+7,2); //Display DispVal into inputted password space PassT+1
+        lcd.print(DispVal);
+        PassT++;
+      }
+      if(PassT == 6)
+      {
+        PassFlg = 0;
+        PassT = 0;
+        int diff = 0;
+        if (PassEnter[0] != PassChk[0]) diff+=1;
+        if (PassEnter[1] != PassChk[1]) diff+=1;
+        if (PassEnter[2] != PassChk[2]) diff+=1;
+        if (PassEnter[3] != PassChk[3]) diff+=1;
+        if (PassEnter[4] != PassChk[4]) diff+=1;
+        if (PassEnter[5] != PassChk[5]) diff+=1;
+        if(diff == 0) 
+        {
+          sysmode = 1; //turn to automatic mode if no differences
+          //say that automatic mode has been unlocked on screen
+          movetoAM = 1;
+        }
+        else //if password was INcorrect
+        {
+          lcd.setCursor(1,1);   //Set cursor to character 4 on line 2
+          lcd.print("INCORRECT PASSWORD");
+          lcd.setCursor(1,2);   //Move cursor to character 4 on line 2
+          lcd.print("Returning to Manual");  
+          delay(3000);
+        }
+        lcd.clear();
+        showMMenu();
+        showCount();
+        PassInit = 0;
+ 
+      }
+      
+    }
+    
+  
+  }
+  
+  //WHEN MACHINE IS IN AUTOMATIC MODE (AFTER PASSWORD)
+  if(sysmode == 1)
+  {
+      if(confSC == 0) //if there is not a confirmation screen running
+      {
+      if(movetoAM == 1) //runs on automatic mode startup
+      {
+        lcd.clear();
+        movetoAM = 0;
+        PrevTime = millis();  
+      }
+      showCount();
+      lcd.setCursor(0,0);   //Move cursor to character 4 on line 2
+      lcd.print("   AUTOMATIC MODE   ");
+      if(MOTORout == 0)
+      {
+          lcd.setCursor(0,2);
+          lcd.print("     MOTOR OFF     ");
+      }
+      else
+      {
+          lcd.setCursor(0,2);        
+          lcd.print("     MOTOR  ON     ");
+      }
+      if(bshow == 1)
+      {
+        scrollbnum = 2;
+        lcd.setCursor(0,3);
+        lcd.print("  B1: TOGGLE MOTOR  ");
+        scrollct++;
+      }
+      if(bshow == 2)
+      {
+        scrollbnum = 3;
+        lcd.setCursor(0,3);
+        lcd.print("  B2: MANUAL  MODE  ");          
+      }        
+      if(bshow == 3)
+      {
+        scrollbnum = 4;
+        lcd.setCursor(0,3);
+        lcd.print(" B3: RESET  COUNTER ");
+      }        
+      if(bshow == 4)  
+      {
+        scrollbnum = 1;
+        lcd.setCursor(0,3);
+        lcd.print("      B4: HELP      ");
+      }
+      CurrTime = millis();
+      if(CurrTime > PrevTime+2500)
+      {
+        PrevTime = CurrTime;
+        if(bshow == 4) bshow = 1;
+        else bshow++;  
+      }
+      }
+      else //if CONFIRMATION SCREEN == 1
+      {
+        if(confINIT == 0)
+        {
+          confINIT = 1;
+          lcd.clear(); 
+        }
+        if(confT == 1)
+        {
+        lcd.setCursor(0,1);   //Move cursor to character 4 on line 2
+        lcd.print("   PRESS AGAIN TO   ");  
+        lcd.setCursor(0,2);   //Move cursor to character 4 on line 2
+        lcd.print("CONFIRM TOGGLE MOTOR");           
+        }
+        if(confT == 2)
+        {
+        lcd.setCursor(0,1);   //Move cursor to character 4 on line 2
+        lcd.print("   PRESS AGAIN TO   ");  
+        lcd.setCursor(0,2);   //Move cursor to character 4 on line 2
+        lcd.print("CONFIRM  MANUAL MODE");           
+        }
+        if(confT == 3)
+        {
+        lcd.setCursor(0,1);   //Move cursor to character 4 on line 2
+        lcd.print("   PRESS AGAIN TO   ");  
+        lcd.setCursor(0,2);   //Move cursor to character 4 on line 2
+        lcd.print("CONFIRM  RESET COUNT");           
+        }
+        if(PassData == 0) nop = 0; //NO OPERATION WHEN NOTHING HAS BEEN PRESSED YET
+        else if(PassData != confT) //when other button has been pressed
+        {
+              confT = 0;
+              confSC = 0; 
+              confINIT = 0;
+              PassData = 0;
+              lcd.clear();
+        }
+
+        
+ 
+        
+      }
+      if(PassFlg == 1)//if a button has been pressed
+      {
+
+        
+       if(PassData == 1)
+       {
+          if(confSC == 0)
+          {
+          confSC = 1;
+          confT = 1;
+          confINIT = 0;
+          }
+          else //if conf screen is already up
+          {          
+              if(MOTORout == 0)
+              {
+                MOTORout = 1;
+                lcd.setCursor(6,2);
+                lcd.print("MOTOR ON");              
+              }
+             else if(MOTORout == 1)
+              {
+                MOTORout = 0;
+                lcd.setCursor(5,2);
+                lcd.print("MOTOR  OFF");              
+              }
+              confT = 0;
+              confSC = 0; 
+              confINIT = 0;
+              lcd.clear();    
+          }  
+        }  
+        if(PassData == 2)
+        {
+          if(confSC == 0)
+          {
+            confSC = 1;
+            confT = 2;
+          }
+          else //if conf screen is already up
+          {
+            sysmode = 0;
+            MOTORout = 0;
+            lcd.clear();
+            showMMenu();
+            confSC = 0;
+            confT = 0;
+            confINIT = 0;
+          }
+        }  
+        if(PassData == 3)
+        {
+          if(confSC == 0)
+          {
+            confSC = 1;
+            confT = 3;
+          }
+          else //if conf screen is already up
+          {
+            lcd.setCursor(0,1);
+            lcd.print("   Count:           ");
+            count = 0;
+            showCount();
+            confSC = 0;
+            confT = 0;
+            confINIT = 0;
+          }
+        } 
+        if(PassData == 4)
+        {
+          
+        }
+        PassFlg = 0;
+        PassData = 0;                           
+      }
+      
+     
+  }
+
+  //MOTOR CONTROL
+  if(MOTORout == 1) digitalWrite(13, HIGH);
+  else digitalWrite(13, LOW);
+  
+}
+
+int showCount()
+{
+  lcd.setCursor(3,1);
+  lcd.print("Count: ");
+  lcd.setCursor(10,1);
+  lcd.print(count);
+  
+  return count;  
+}
+
+int showMMenu()
+{
+  lcd.setCursor(3,0);
+  lcd.print("MANUAL  MODE"); 
+  showCount();
+  lcd.setCursor(2,2);
+  lcd.print("Press any btn to");
+  lcd.setCursor(2,3);
+  lcd.print("unlock auto mode");
+}
+
+float volts(int adPin)
+{
+  return float(analogRead(adPin))*5/1024;
+}
+ 
