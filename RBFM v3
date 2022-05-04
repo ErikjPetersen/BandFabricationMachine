@@ -8,11 +8,6 @@
 // led screen, buttons, TubeDetSensor,  //
 // CutSensor, relay, and switches.      //
 //                                      //
-// System Has 2 MODES:                  //
-// Mode = 0; Manual Mode                //
-// Mode = 1; Automatic Mode             //
-//                                      //
-//                                      //
 //////////////////////////////////////////
 
 /////////////////
@@ -25,7 +20,7 @@
 // Initial Setup Variables
 /////////////////
 //INITIALIZE VARIABLES
-  int sysmode = 0;            //0 = Manual, 1 = Automatic
+  int sysmode = 0;
   int count = 0;
   int countFlg = 0;
   int PassFlg = 0;
@@ -89,14 +84,10 @@ void setup()
   lcd.backlight();
   
 //Initialize main menu 
-  lcd.setCursor(3,0);
-  lcd.print("MANUAL  MODE"); 
   lcd.setCursor(3,1);
+  lcd.print("MANUAL  MODE"); 
+  lcd.setCursor(3,2);
   lcd.print("Count: ");
-  lcd.setCursor(2,2);
-  lcd.print("Press any btn to");
-  lcd.setCursor(2,3);
-  lcd.print("unlock auto mode");
   
 }
 
@@ -148,10 +139,14 @@ void loop()
 
 
   //TEST FOR 4 individual buttons (sets variables B0-B3 0-no press 1-pressed)
-  B1val = digitalRead(B1Pin); //read state of pushbuttons
-  B2val = digitalRead(B2Pin);
-  B3val = digitalRead(B3Pin);
-  B4val = digitalRead(B4Pin);
+  //B1val = digitalRead(B1Pin); //read state of pushbuttons
+  //B2val = digitalRead(B2Pin);
+  //B3val = digitalRead(B3Pin);
+  //B4val = digitalRead(B4Pin);
+  B1val = 0; //These are all 0 because we have removed button functionality on final version (no motor)
+  B2val = 0;
+  B3val = 0;
+  B4val = 0;
   if(B1val == 1)
   {
     PassData = 1;
@@ -454,22 +449,18 @@ void loop()
 int showCount()
 {
 
-  lcd.setCursor(3,1);
+  lcd.setCursor(3,2);
   lcd.print("Count: ");
-  lcd.setCursor(10,1);
+  lcd.setCursor(10,2);
   lcd.print(count);
   return count;  
 }
 
 int showMMenu()
 {
-  lcd.setCursor(3,0);
+  lcd.setCursor(3,1);
   lcd.print("MANUAL  MODE"); 
   showCount();
-  lcd.setCursor(2,2);
-  lcd.print("Press any btn to");
-  lcd.setCursor(2,3);
-  lcd.print("unlock auto mode");
 }
 
 float volts(int adPin)
